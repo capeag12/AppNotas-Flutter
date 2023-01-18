@@ -13,6 +13,10 @@ class Servicio {
     this._listaNotas.add(n);
   }
 
+  void setNotas(List<Nota> list) {
+    this._listaNotas = list;
+  }
+
   void eliminarNota(int index) {
     this._listaNotas.removeAt(index);
   }

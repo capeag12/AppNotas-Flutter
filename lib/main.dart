@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:appnotas/modelo/nota.dart';
 import 'package:appnotas/modelo/servicio.dart';
 import 'package:appnotas/widgets/notaWidget.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -16,14 +20,55 @@ class _MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
-class _MyAppState extends State<_MyApp> {
+class _MyAppState extends State<_MyApp> with WidgetsBindingObserver {
   late TextEditingController controller;
   Servicio _servicio = Servicio();
+
+  _MyAppState();
   @override
   void initState() {
     super.initState();
 
+    leerJson().then((value) {
+      if (value == "") {
+        print("No hay json que recuperar");
+      } else {
+        var listaJSON = jsonDecode(value);
+        List<Nota> listaNotas = [];
+        print(listaJSON);
+
+        for (var element in listaJSON) {
+          print(element);
+          listaNotas
+              .add(Nota(element['texto'], DateTime.parse(element['fecha'])));
+        }
+
+        setState(() {
+          this._servicio.setNotas(listaNotas);
+        });
+      }
+    });
     controller = TextEditingController();
+  }
+
+  escribir() async {
+    String json = jsonEncode(this._servicio.getNotas());
+    final directory = await getApplicationDocumentsDirectory();
+    print(directory.path);
+    File archivo = await File('${directory.path}/notas.json');
+    await archivo.writeAsString(json);
+  }
+
+  Future<String> leerJson() async {
+    String text = "";
+    try {
+      Directory directory = await getApplicationDocumentsDirectory();
+      File file = File('${directory.path}/notas.json');
+      text = await file.readAsString();
+    } catch (e) {
+      print("Couldn't read file");
+    }
+    return text;
   }
 
   void agregarNota(String? texto) {
@@ -33,7 +78,7 @@ class _MyAppState extends State<_MyApp> {
 
     String txtFinal = "" + texto;
     setState(() {
-      this._servicio.addNota(Nota(txtFinal));
+      this._servicio.addNota(Nota(txtFinal, DateTime.now()));
     });
   }
 
@@ -73,7 +118,9 @@ class _MyAppState extends State<_MyApp> {
             TextButton(
               onPressed: () async {
                 agregarNota(controller.text);
+                controller.text = "";
                 Navigator.of(context).pop(controller.text);
+                escribir();
               },
               child: Text('Aceptar'),
             ),
@@ -102,10 +149,19 @@ class _ListaNotasState extends State<_ListaNotas> {
 
   _ListaNotasState(this._servicio);
 
+  escribir() async {
+    String json = jsonEncode(this._servicio.getNotas());
+    final directory = await getApplicationDocumentsDirectory();
+    print(directory.path);
+    File archivo = await File('${directory.path}/notas.json');
+    await archivo.writeAsString(json);
+  }
+
   void eliminarNota(int indice) {
     setState(() {
       _servicio.eliminarNota(indice);
     });
+    escribir();
   }
 
   @override
